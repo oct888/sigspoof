@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Signature Spoofer</string>
+    <string name="xposed_description">Spoof package signatures for selected apps</string>
+</resources>

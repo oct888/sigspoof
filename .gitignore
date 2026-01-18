@@ -1,0 +1,68 @@
+.idea
+.vscode
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Built objects and artifacts
+bin/
+gen/
+out/
+build/
+.gradle/
+ASL/
+
+# Android Studio / IntelliJ files
+.idea/assetWizardSettings.xml
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/caches/
+.idea/libraries/
+.idea/shelf/
+*.iml
+*.iws
+*.ipr
+
+# Local configuration files (contains SDK paths, etc.)
+local.properties
+
+# Secrets and sensitive data
+# (Uncomment the next line if you store API keys in a secrets.properties file)
+# secrets.properties
+
+# Log files
+*.log
+
+# Android App Bundle / APKs
+*.apk
+*.apks
+*.aab
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Captures and Profiling
+*.hprof
+captures/
+
+# Kotlin / Multiplatform specific
+.kotlin/
+kotlin-js-store/
+
+Hide-My-Applist/
+SignatureSpoofer/
+*.tar.gz
