@@ -7,6 +7,7 @@ import com.oct.sigspoof.utils.Log
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.IXposedHookZygoteInit
 import de.robv.android.xposed.XC_MethodHook
+import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 import kotlin.concurrent.thread
@@ -57,30 +58,32 @@ class XposedEntry : IXposedHookZygoteInit, IXposedHookLoadPackage {
     private fun hookSystemServer(lpparam: XC_LoadPackage.LoadPackageParam) {
         Log.d("Hooking system_server")
 
-        var serviceManagerHook: XC_MethodHook.Unhook? = null
+        val serviceManagerHooks = mutableSetOf<XC_MethodHook.Unhook>()
         
         try {
-            serviceManagerHook = XposedHelpers.findAndHookMethod(
+            val serviceManagerClass = XposedHelpers.findClass(
                 "android.os.ServiceManager",
                 lpparam.classLoader,
+            )
+            serviceManagerHooks += XposedBridge.hookAllMethods(
+                serviceManagerClass,
                 "addService",
-                String::class.java,
-                android.os.IBinder::class.java,
-                Boolean::class.javaPrimitiveType,
-                Int::class.javaPrimitiveType,
                 object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
-                        if (param.args[0] == "package") {
-                            serviceManagerHook?.unhook()
-                            val pms = param.args[1] as IPackageManager
-                            Log.d("Got PMS: $pms")
-                            
-                            thread {
-                                runCatching {
-                                    initializeService(pms)
-                                }.onFailure {
-                                    Log.e("Failed to initialize service", it)
-                                }
+                        if (param.args.isEmpty() || param.args[0] != "package") {
+                            return
+                        }
+
+                        val pms = param.args.getOrNull(1) as? IPackageManager ?: return
+                        serviceManagerHooks.toList().forEach { it.unhook() }
+                        serviceManagerHooks.clear()
+                        Log.d("Got PMS from addService(${param.args.size} args): $pms")
+
+                        thread {
+                            runCatching {
+                                initializeService(pms)
+                            }.onFailure {
+                                Log.e("Failed to initialize service", it)
                             }
                         }
                     }

@@ -11,7 +11,9 @@ plugins {
 }
 val keystorePropertiesFile = rootProject.file("local.properties")
 val keystoreProperties = Properties()
-keystoreProperties.load(keystorePropertiesFile.inputStream())
+if (keystorePropertiesFile.isFile) {
+    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
+}
 
 android {
     namespace = "com.oct.sigspoof"
