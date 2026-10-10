@@ -58,6 +58,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         loadData()
+        viewModelScope.launch {
+            ServiceClient.isConnected.collect { connected ->
+                if (connected) {
+                    loadData(isRefresh = true)
+                }
+            }
+        }
     }
 
     fun loadData(isRefresh: Boolean = false) {

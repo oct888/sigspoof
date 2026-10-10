@@ -13,6 +13,10 @@ object SignatureVerifier {
      * Verify that the APK at the given path has a valid signature matching our expected certificate.
      */
     fun verifyAppSignature(apkPath: String): Boolean {
+        if (BuildConfig.SKIP_SIGNATURE_VERIFICATION) {
+            Log.d("Signature verification skipped (debug build)")
+            return true
+        }
         return try {
             val verifier = ApkVerifier.Builder(File(apkPath))
                 .setMinCheckedPlatformVersion(24)

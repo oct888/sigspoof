@@ -17,6 +17,14 @@ object ServiceClient : IBinder.DeathRecipient {
     fun linkService(binder: IBinder) {
         synchronized(this) {
             try {
+                if (service?.asBinder() == binder && _isConnected.value) {
+                    Log.d("Service already linked to this binder")
+                    return
+                }
+                try {
+                    service?.asBinder()?.unlinkToDeath(this, 0)
+                } catch (_: Throwable) {
+                }
                 service = ISpooferService.Stub.asInterface(binder)
                 binder.linkToDeath(this, 0)
                 _isConnected.value = true
