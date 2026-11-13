@@ -58,20 +58,62 @@ internal object SignatureSpooferHooks {
         }
     }
 
-    private fun createSigningInfo(entry: SpoofEntry): SigningInfo? {
-        val fakeSignature = Signature(entry.signature.toByteArray())
-        val keys = entry.publicKey?.let { key ->
-            ArraySet<PublicKey>().apply { add(key) }
+    private fun findFirstLoadableClass(vararg candidates: String): Class<*>? {
+        for (name in candidates) {
+            try {
+                return Class.forName(name)
+            } catch (e: ClassNotFoundException) {
+                // try next
+            }
         }
+        return null
+    }
+
+    private fun createSigningInfo(entry: SpoofEntry): SigningInfo? {
+        // The public SigningInfo(int, List<Signature>, ArraySet, List) constructor used
+        // above does not exist pre-API 35. Build the internal SigningDetails object via
+        // reflection instead (same approach FakeGApps uses), then wrap it in SigningInfo.
+        val fakeSignature = Signature(entry.signature.toByteArray())
+        val sigs = arrayOf(fakeSignature)
+        val pks = ArraySet<PublicKey>()
+        entry.publicKey?.let { pks.add(it) }
+
         return try {
-            // Use XposedHelpers to call hidden constructor
-            de.robv.android.xposed.XposedHelpers.newInstance(
-                SigningInfo::class.java,
-                SIGNING_BLOCK_V3,
-                listOf(fakeSignature),
-                keys,
-                null
-            ) as SigningInfo
+            val signingDetailsClass = findFirstLoadableClass(
+                "android.content.pm.SigningDetails",
+                // Android 9-12 have SigningDetails embedded in PackageParser
+                "android.content.pm.PackageParser\$SigningDetails"
+            ) ?: run {
+                Log.e("createSigningInfo: SigningDetails class not found")
+                return null
+            }
+
+            val signingDetails: Any = try {
+                // Android 10-12 constructor: (Signature[], int, ArraySet, Signature[])
+                val ctor = signingDetailsClass.getDeclaredConstructor(
+                    Array<Signature>::class.java,
+                    Int::class.javaPrimitiveType,
+                    ArraySet::class.java,
+                    Array<Signature>::class.java
+                )
+                ctor.isAccessible = true
+                ctor.newInstance(sigs, SIGNING_BLOCK_V3, pks, null)
+            } catch (e: NoSuchMethodException) {
+                // Android 9 has an extra pastSigningCertificatesFlags argument
+                val ctor = signingDetailsClass.getDeclaredConstructor(
+                    Array<Signature>::class.java,
+                    Int::class.javaPrimitiveType,
+                    ArraySet::class.java,
+                    Array<Signature>::class.java,
+                    IntArray::class.java
+                )
+                ctor.isAccessible = true
+                ctor.newInstance(sigs, SIGNING_BLOCK_V3, pks, null, null)
+            }
+
+            val signingInfoCtor = SigningInfo::class.java.getDeclaredConstructor(signingDetailsClass)
+            signingInfoCtor.isAccessible = true
+            signingInfoCtor.newInstance(signingDetails) as SigningInfo
         } catch (t: Throwable) {
             Log.e("Failed to create SigningInfo: ${t.message}", t)
             null
